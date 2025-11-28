@@ -1,0 +1,70 @@
+# Cursor Rules for Flutter Project using Clean Architecture + BLoC + SOLID
+
+# Project Structure
+- lib/
+  - core/
+    - errors/
+    - usecases/
+    - utils/
+  - features/
+    - <feature_name>/
+      - data/
+        - datasources/
+        - models/
+        - repositories/
+      - domain/
+        - entities/
+        - repositories/
+        - usecases/
+      - presentation/
+        - bloc/
+        - pages/
+        - widgets/
+  - injection_container.dart
+  - main.dart
+
+# Naming Conventions
+- Classes: PascalCase (e.g., LoginBloc, UserRepository)
+- Files: snake_case (e.g., login_bloc.dart)
+- BLoC event states: <Feature>Event, <Feature>State
+- Use cases: Verb-based (e.g., GetUserProfile)
+- Repository interfaces in domain/, implementations in data/
+
+# Code Style Rules
+- No business logic inside UI widgets.
+- Presentation layer communicates only with use cases.
+- Use cases return Either<Failure, Success>.
+- Dependencies injected using get_it.
+- Keep widgets small and stateless whenever possible.
+- All BLoCs extend Bloc<Event, State>.
+- Avoid exposing streams manually; rely on BLoC patterns.
+
+# SOLID Guidelines
+- Single Responsibility: each class handles one concern.
+- Open/Closed: prefer extension through abstraction.
+- Liskov: models/entities should be interchangeable.
+- Interface Segregation: keep repository interfaces clean.
+- Dependency Inversion: UI -> usecases -> repository abstractions.
+
+# Testing Rules
+- Unit tests required for usecases, repositories, and blocs.
+- Mock external systems using mocktail.
+- Widget tests for UI behaviour.
+
+# Commit Conventions
+- feat: new feature
+- fix: bug fix
+- refactor: code improvement without behaviour change
+- test: add or fix tests
+- chore: tooling updates
+- docs: documentation updates
+
+# Linting
+- Use flutter_lints + custom strict rules.
+- Avoid ignoring linter warnings.
+
+# Additional Notes
+- Keep constants inside core/constants or feature-specific folders.
+- Use sealed classes for states and events when needed.
+- Use immutable classes and value equality (equatable).
+- API services must be abstracted behind remote/datasource layers.
