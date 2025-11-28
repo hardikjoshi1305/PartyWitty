@@ -27,12 +27,20 @@ class EventListingLoaded extends EventListingState {
   final List<EventFilter> filters;
   final List<EventFilter> activeFilters;
   final List<Bid> userBids;
+  final int currentPage;
+  final int totalPages;
+  final bool hasMore;
+  final bool isLoadingMore;
 
   const EventListingLoaded({
     required this.events,
     required this.filters,
     required this.activeFilters,
     required this.userBids,
+    this.currentPage = 1,
+    this.totalPages = 1,
+    this.hasMore = false,
+    this.isLoadingMore = false,
   });
 
   EventListingLoaded copyWith({
@@ -40,17 +48,34 @@ class EventListingLoaded extends EventListingState {
     List<EventFilter>? filters,
     List<EventFilter>? activeFilters,
     List<Bid>? userBids,
+    int? currentPage,
+    int? totalPages,
+    bool? hasMore,
+    bool? isLoadingMore,
   }) {
     return EventListingLoaded(
       events: events ?? this.events,
       filters: filters ?? this.filters,
       activeFilters: activeFilters ?? this.activeFilters,
       userBids: userBids ?? this.userBids,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 
   @override
-  List<Object?> get props => [events, filters, activeFilters, userBids];
+  List<Object?> get props => [
+    events,
+    filters,
+    activeFilters,
+    userBids,
+    currentPage,
+    totalPages,
+    hasMore,
+    isLoadingMore,
+  ];
 }
 
 /// Error state

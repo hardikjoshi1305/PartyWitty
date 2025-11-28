@@ -1,11 +1,14 @@
 class ApiConstants {
   // Base URLs
-  static const String baseUrl = 'https://api.example.com';
+  static const String baseUrl = 'https://admin.partywitty.com/master/APIs';
+  static const String imageBaseUrl = 'https://admin.partywitty.com';
 
   // API Endpoints
-  // static const String loginEndpoint = '/auth/login';
-  // static const String usersEndpoint = '/users';
+  static const String allEventsEndpoint = '/ClubEvent/allEvents';
+  static const String eventDetailsEndpoint = '/Web/eventDetails';
 
-  // API Keys (Move to environment variables in production)
-  // static const String apiKey = 'your_api_key_here';
+  // Static location data (as per requirement)
+  static const double defaultLatitude = 21.1972014;
+  static const double defaultLongitude = 72.8544903;
+  static const int defaultLimit = 10;
 }

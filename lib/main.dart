@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'injection_container.dart' as di;
 import 'core/constants/app_colors.dart';
 import 'features/event_listing/presentation/pages/event_listing_page.dart';
+import 'features/event_listing/presentation/bloc/event_listing_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +35,10 @@ class MyApp extends StatelessWidget {
           iconTheme: IconThemeData(color: AppColors.iconPrimary),
         ),
       ),
-      home: const EventListingPage(),
+      home: BlocProvider(
+        create: (context) => di.sl<EventListingBloc>(),
+        child: const EventListingPage(),
+      ),
     );
   }
 }

@@ -4,9 +4,18 @@ import '../entities/event.dart';
 import '../entities/event_detail.dart';
 import '../entities/filter.dart';
 import '../entities/bid.dart';
+import '../entities/paginated_response.dart';
 
 /// Event Repository interface
 abstract class EventRepository {
+  /// Get paginated events
+  Future<Either<Failure, PaginatedEventsResponse>> getPaginatedEvents({
+    required double latitude,
+    required double longitude,
+    required int page,
+    required int limit,
+  });
+
   /// Get all events
   Future<Either<Failure, List<Event>>> getEvents();
 
@@ -20,6 +29,12 @@ abstract class EventRepository {
 
   /// Get event detail by ID (with extended information)
   Future<Either<Failure, EventDetail>> getEventDetailById(String eventId);
+
+  /// Get event detail by slugs (with extended information)
+  Future<Either<Failure, EventDetail>> getEventDetailBySlugs({
+    required String slug1,
+    required String slug2,
+  });
 
   /// Get available filters
   Future<Either<Failure, List<EventFilter>>> getFilters();

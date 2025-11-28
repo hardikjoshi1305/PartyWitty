@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/event.dart';
@@ -76,28 +77,101 @@ class EventCardWidget extends StatelessWidget {
   Widget _buildEventImage() {
     return Stack(
       children: [
-        // Event image (placeholder)
-        Container(
-          height: 280,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.primaryPurple,
-                AppColors.primaryPurpleLight,
-                AppColors.accentBlue,
-              ],
+        // Event image
+        ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          child: Container(
+            height: 280,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primaryPurple,
+                  AppColors.primaryPurpleLight,
+                  AppColors.accentBlue,
+                ],
+              ),
             ),
-          ),
-          child: Center(
-            child: Icon(
-              Icons.image,
-              size: 60,
-              color: AppColors.iconWhite.withOpacity(0.5),
-            ),
+            child: event.imageUrl.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: event.imageUrl,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fadeInDuration: const Duration(milliseconds: 300),
+                    fadeOutDuration: const Duration(milliseconds: 100),
+                    maxHeightDiskCache: 1000,
+                    maxWidthDiskCache: 1000,
+                    memCacheHeight: 560,
+                    memCacheWidth: 1000,
+                    placeholder: (context, url) => Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.primaryPurple,
+                            AppColors.primaryPurpleLight,
+                            AppColors.accentBlue,
+                          ],
+                        ),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primaryPurple,
+                              AppColors.primaryPurpleLight,
+                              AppColors.accentBlue,
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.image,
+                            size: 60,
+                            color: AppColors.iconWhite.withOpacity(0.5),
+                          ),
+                        ),
+                      );
+                    },
+                    httpHeaders: const {
+                      'Accept': 'image/*',
+                      'User-Agent': 'PartyWitty/1.0',
+                    },
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.primaryPurple,
+                          AppColors.primaryPurpleLight,
+                          AppColors.accentBlue,
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.image,
+                        size: 60,
+                        color: AppColors.iconWhite.withOpacity(0.5),
+                      ),
+                    ),
+                  ),
           ),
         ),
 
@@ -216,16 +290,17 @@ class EventCardWidget extends StatelessWidget {
                 style: AppTextStyles.bodyMedium.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
+
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundLightGrey,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(event.artistRole, style: AppTextStyles.caption),
-              ),
+              // const SizedBox(width: 8),
+              // Container(
+              //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              //   decoration: BoxDecoration(
+              //     color: AppColors.backgroundLightGrey,
+              //     borderRadius: BorderRadius.circular(4),
+              //   ),
+              //   child: Text(event.artistRole, style: AppTextStyles.caption),
+              // ),
             ],
           ),
           const SizedBox(height: 12),
@@ -237,12 +312,12 @@ class EventCardWidget extends StatelessWidget {
               const SizedBox(width: 4),
               Text(event.venue.name, style: AppTextStyles.bodyMedium),
               const SizedBox(width: 12),
-              Icon(Icons.star, size: 16, color: AppColors.accentYellow),
-              const SizedBox(width: 4),
-              Text(
-                '${event.venue.rating} Review (${event.venue.reviewCount.toString().padLeft(2, '0')})',
-                style: AppTextStyles.bodySmall,
-              ),
+              // Icon(Icons.star, size: 16, color: AppColors.accentYellow),
+              // const SizedBox(width: 4),
+              // Text(
+              //   '${event.venue.rating} Review (${event.venue.reviewCount.toString().padLeft(2, '0')})',
+              //   style: AppTextStyles.bodySmall,
+              // ),
             ],
           ),
           const SizedBox(height: 8),

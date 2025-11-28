@@ -22,7 +22,11 @@ class EventDetailBloc extends Bloc<EventDetailEvent, EventDetailState> {
     emit(const EventDetailLoading());
 
     final result = await getEventDetail(
-      EventDetailParams(eventId: event.eventId),
+      EventDetailParams(
+        eventId: event.eventId,
+        slug1: event.slug1,
+        slug2: event.slug2,
+      ),
     );
 
     result.fold(

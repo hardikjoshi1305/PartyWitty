@@ -10,12 +10,14 @@ abstract class EventDetailEvent extends Equatable {
 
 /// Load event detail
 class LoadEventDetailEvent extends EventDetailEvent {
-  final String eventId;
+  final String? eventId;
+  final String? slug1;
+  final String? slug2;
 
-  const LoadEventDetailEvent(this.eventId);
+  const LoadEventDetailEvent({this.eventId, this.slug1, this.slug2});
 
   @override
-  List<Object?> get props => [eventId];
+  List<Object?> get props => [eventId, slug1, slug2];
 }
 
 /// Toggle bookmark

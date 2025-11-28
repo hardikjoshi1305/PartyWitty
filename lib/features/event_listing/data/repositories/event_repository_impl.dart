@@ -5,6 +5,7 @@ import '../../domain/entities/event.dart';
 import '../../domain/entities/event_detail.dart';
 import '../../domain/entities/filter.dart';
 import '../../domain/entities/bid.dart';
+import '../../domain/entities/paginated_response.dart';
 import '../../domain/repositories/event_repository.dart';
 import '../datasources/event_remote_data_source.dart';
 
@@ -13,6 +14,30 @@ class EventRepositoryImpl implements EventRepository {
   final EventRemoteDataSource remoteDataSource;
 
   EventRepositoryImpl({required this.remoteDataSource});
+
+  @override
+  Future<Either<Failure, PaginatedEventsResponse>> getPaginatedEvents({
+    required double latitude,
+    required double longitude,
+    required int page,
+    required int limit,
+  }) async {
+    try {
+      final response = await remoteDataSource.getPaginatedEvents(
+        latitude: latitude,
+        longitude: longitude,
+        page: page,
+        limit: limit,
+      );
+      return Right(response.toEntity());
+    } on ServerException {
+      return Left(ServerFailure());
+    } on NetworkException {
+      return Left(NetworkFailure());
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
 
   @override
   Future<Either<Failure, List<Event>>> getEvents() async {
@@ -66,6 +91,26 @@ class EventRepositoryImpl implements EventRepository {
     try {
       final eventDetail = await remoteDataSource.getEventDetailById(eventId);
       return Right(eventDetail);
+    } on ServerException {
+      return Left(ServerFailure());
+    } on NetworkException {
+      return Left(NetworkFailure());
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, EventDetail>> getEventDetailBySlugs({
+    required String slug1,
+    required String slug2,
+  }) async {
+    try {
+      final eventDetail = await remoteDataSource.getEventDetailBySlugs(
+        slug1: slug1,
+        slug2: slug2,
+      );
+      return Right(eventDetail.toEntity());
     } on ServerException {
       return Left(ServerFailure());
     } on NetworkException {

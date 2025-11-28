@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 
@@ -58,13 +59,85 @@ class _ImageCarouselWidgetState extends State<ImageCarouselWidget> {
                     ],
                   ),
                 ),
-                child: Center(
-                  child: Icon(
-                    Icons.image,
-                    size: 60,
-                    color: AppColors.iconWhite.withOpacity(0.5),
+                child:  widget.imageUrls.isNotEmpty
+                    ? CachedNetworkImage(
+                  imageUrl: widget.imageUrls[index],
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fadeInDuration: const Duration(milliseconds: 300),
+                  fadeOutDuration: const Duration(milliseconds: 100),
+                  maxHeightDiskCache: 1000,
+                  maxWidthDiskCache: 1000,
+                  memCacheHeight: 560,
+                  memCacheWidth: 1000,
+                  placeholder: (context, url) => Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.primaryPurple,
+                          AppColors.primaryPurpleLight,
+                          AppColors.accentBlue,
+                        ],
+                      ),
+                    ),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.primaryPurple,
+                            AppColors.primaryPurpleLight,
+                            AppColors.accentBlue,
+                          ],
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.image,
+                          size: 60,
+                          color: AppColors.iconWhite.withOpacity(0.5),
+                        ),
+                      ),
+                    );
+                  },
+                  httpHeaders: const {
+                    'Accept': 'image/*',
+                    'User-Agent': 'PartyWitty/1.0',
+                  },
+                )
+                    : Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primaryPurple,
+                        AppColors.primaryPurpleLight,
+                        AppColors.accentBlue,
+                      ],
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.image,
+                      size: 60,
+                      color: AppColors.iconWhite.withOpacity(0.5),
+                    ),
                   ),
                 ),
+
               );
             },
           ),

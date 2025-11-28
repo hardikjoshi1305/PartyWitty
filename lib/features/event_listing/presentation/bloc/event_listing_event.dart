@@ -68,3 +68,8 @@ class LoadUserBidsEvent extends EventListingEvent {
 class RefreshEventsEvent extends EventListingEvent {
   const RefreshEventsEvent();
 }
+
+/// Load more events (pagination)
+class LoadMoreEventsEvent extends EventListingEvent {
+  const LoadMoreEventsEvent();
+}

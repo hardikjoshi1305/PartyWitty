@@ -1,5 +1,6 @@
 import '../../domain/entities/event.dart';
 import '../../domain/entities/event_detail.dart';
+import '../../../../core/constants/api_constants.dart';
 import 'event_model.dart';
 
 /// Event detail model extending EventDetail entity with JSON serialization
@@ -69,6 +70,8 @@ class EventDetailModel extends EventDetail {
             recentAttendees: event.recentAttendees,
             isFavorite: event.isFavorite,
             isBookmarked: event.isBookmarked,
+            slug1: event.slug1,
+            slug2: event.slug2,
           );
 
     return {
@@ -84,6 +87,60 @@ class EventDetailModel extends EventDetail {
           .map((e) => OfferBoxModel.fromOfferBox(e).toJson())
           .toList(),
     };
+  }
+
+  /// Factory method to create EventDetailModel from API response JSON
+  factory EventDetailModel.fromApiJson(Map<String, dynamic> json) {
+    // Build event from the detail API response
+    final event = EventModel.fromApiJson(json);
+
+    // Extract price from min_price
+    final price = double.tryParse(json['min_price']?.toString() ?? '0') ?? 0.0;
+
+    // Extract about text
+    final aboutText = json['event_des'] as String?;
+
+    // Extract image URLs from eventBanners
+    final imageUrls = <String>[];
+    if (json['eventBanners'] != null) {
+      final banners = json['eventBanners'] as List<dynamic>;
+      for (final banner in banners) {
+        if (banner is Map<String, dynamic> && banner['img'] != null) {
+          final imagePath = banner['img'] as String;
+          if (imagePath.isNotEmpty) {
+            imageUrls.add(
+              '${ApiConstants.imageBaseUrl}/master/assets/uploads/$imagePath',
+            );
+          }
+        }
+      }
+    }
+    // If no banners, use main image
+    if (imageUrls.isEmpty && event.imageUrl.isNotEmpty) {
+      imageUrls.add(event.imageUrl);
+    }
+
+    // Extract validity - could be derived from other fields if needed
+    String? validity;
+    if (json['sitting_confirm'] == 'yes') {
+      validity = 'Sitting Confirmed';
+    }
+
+    // Menu categories - not provided in API response, return empty
+    final menuCategories = <MenuCategory>[];
+
+    // Offer boxes - not provided in API response, return empty
+    final offerBoxes = <OfferBox>[];
+
+    return EventDetailModel(
+      event: event,
+      price: price > 0 ? price : null,
+      validity: validity,
+      aboutText: aboutText,
+      imageUrls: imageUrls,
+      menuCategories: menuCategories,
+      offerBoxes: offerBoxes,
+    );
   }
 
   EventDetail toEntity() => this;

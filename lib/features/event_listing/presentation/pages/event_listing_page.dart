@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../domain/entities/event.dart';
+import '../../../../injection_container.dart' as di;
 import '../../domain/entities/filter.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/filter_chip_widget.dart';
 import '../widgets/event_card_widget.dart';
+import '../bloc/event_listing_bloc.dart';
+import '../bloc/event_listing_event.dart';
+import '../bloc/event_listing_state.dart';
+import '../bloc/event_detail_bloc.dart';
 import 'event_detail_page.dart';
 
 /// Event Listing Page - Main screen showing events with filters
@@ -19,101 +24,50 @@ class EventListingPage extends StatefulWidget {
 
 class _EventListingPageState extends State<EventListingPage> {
   int _currentNavIndex = 0;
-
-  // Mock data for demonstration (will be replaced with BLoC)
-  late List<EventFilter> _filters;
-  late List<Event> _events;
-  late List<Event> _userBids;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _initializeMockData();
+    // Load events when page is initialized
+    context.read<EventListingBloc>().add(const LoadEventsEvent());
+
+    // Set up scroll listener for pagination
+    _scrollController.addListener(_onScroll);
   }
 
-  void _initializeMockData() {
-    // Mock filters
-    _filters = [
-      const EventFilter(
-        id: '1',
-        name: 'carnival',
-        displayName: 'Carnival',
-        isActive: true,
-      ),
-      const EventFilter(
-        id: '2',
-        name: 'social',
-        displayName: 'Social',
-        count: 32,
-        isActive: true,
-      ),
-      const EventFilter(
-        id: '3',
-        name: 'live_music',
-        displayName: 'Live Music',
-        isActive: false,
-      ),
-      const EventFilter(
-        id: '4',
-        name: 'underground',
-        displayName: 'Underground',
-        isActive: false,
-      ),
-    ];
-
-    // Mock venue
-    const mockVenue = Venue(
-      id: '1',
-      name: 'F-Bar',
-      address: 'DLP Phase 3, Gurugram, Haryana',
-      locationShort: 'DLP Phase 3, Gurugram',
-      rating: 4.1,
-      reviewCount: 3,
-      distanceKm: 1.2,
-    );
-
-    // Mock event
-    final mockEvent = Event(
-      id: '1',
-      name: 'Sitar Magic by Rishabh Rikhiram Sharma...',
-      imageUrl: 'https://example.com/image.jpg',
-      dateTime: DateTime.now(),
-      timeDisplay: 'Today | 10:00 PM Onwards',
-      category: 'Carnival',
-      eventType: 'Stand-up Comedy',
-      artistName: 'Malvika Khanna',
-      artistRole: 'Artist',
-      venue: mockVenue,
-      inclusions: [
-        '3 Starters',
-        '2 Main Course',
-        '1 Dessert',
-        '2 Drinks',
-        '1 Appetizer',
-        'Live Music',
-        'DJ',
-        'Dance Floor',
-        'Valet Parking',
-        'Air Conditioning',
-        '10+ More',
-      ],
-      offer: 'Get Flat 25% Off On Food & Bever.',
-      attendeeCount: 7,
-      recentAttendees: ['Rohit Sharma'],
-      isFavorite: false,
-      isBookmarked: false,
-    );
-
-    _events = [mockEvent];
-    _userBids = List.generate(3, (index) => mockEvent);
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
-  void _onFilterTap(int index) {
-    setState(() {
-      _filters[index] = _filters[index].copyWith(
-        isActive: !_filters[index].isActive,
-      );
-    });
+  void _onScroll() {
+    if (_isBottom) {
+      context.read<EventListingBloc>().add(const LoadMoreEventsEvent());
+    }
+  }
+
+  bool get _isBottom {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= (maxScroll * 0.9);
+  }
+
+
+  void _onFilterTap(int index, List<EventFilter> filters) {
+    final filter = filters[index];
+    final bloc = context.read<EventListingBloc>();
+    final currentState = bloc.state;
+
+    if (currentState is EventListingLoaded) {
+      if (filter.isActive) {
+        bloc.add(RemoveFilterEvent(filter));
+      } else {
+        bloc.add(ApplyFilterEvent(filter));
+      }
+    }
   }
 
   void _onNavTap(int index) {
@@ -136,56 +90,210 @@ class _EventListingPageState extends State<EventListingPage> {
           // Handle notification tap
         },
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Page title
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              child: Text('Event Listing', style: AppTextStyles.heading3),
-            ),
+      body: BlocBuilder<EventListingBloc, EventListingState>(
+        builder: (context, state) {
+          if (state is EventListingLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // Filter chips
-            _buildFilterChips(),
-
-            const SizedBox(height: 16),
-
-            // Events list
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+          if (state is EventListingError) {
+            return Center(
               child: Column(
-                children: _events.map((event) {
-                  return EventCardWidget(
-                    event: event,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              EventDetailPage(eventId: event.id),
-                        ),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    state.message,
+                    style: AppTextStyles.bodyLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<EventListingBloc>().add(
+                        const LoadEventsEvent(),
                       );
                     },
-                    onBookmarkTap: () {
-                      // Handle bookmark tap
-                    },
-                    onShareTap: () {
-                      // Handle share tap
-                    },
-                    showAttendeeInfo: true,
-                  );
-                }).toList(),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
-            ),
+            );
+          }
 
-            // Divider with dots
-            _buildDivider(),
+          if (state is EventListingLoaded) {
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<EventListingBloc>().add(
+                  const RefreshEventsEvent(),
+                );
+                // Wait a bit for the refresh to complete
+                await Future.delayed(const Duration(seconds: 1));
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Page title
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                      child: Text(
+                        'Event Listing',
+                        style: AppTextStyles.heading3,
+                      ),
+                    ),
 
-            // My Bids section
-            _buildMyBidsSection(),
-          ],
-        ),
+                    // Filter chips
+                    if (state.filters.isNotEmpty)
+                      _buildFilterChips(state.filters),
+
+                    const SizedBox(height: 16),
+
+                    // Events list
+                    if (state.events.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Center(child: Text('No events found')),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          children: state.events.map((event) {
+                            return EventCardWidget(
+                              event: event,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => BlocProvider(
+                                      create: (context) =>
+                                          di.sl<EventDetailBloc>(),
+                                      child: EventDetailPage(
+                                        eventId: event.id,
+                                        slug1: event.slug1,
+                                        slug2: event.slug2,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              onBookmarkTap: () {
+                                context.read<EventListingBloc>().add(
+                                  ToggleBookmarkEvent(event.id),
+                                );
+                              },
+                              onShareTap: () {
+                                // Handle share tap
+                              },
+                              showAttendeeInfo: true,
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                    // Loading more indicator
+                    if (state.isLoadingMore)
+                      const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+
+                    // Divider with dots
+                    if (state.events.isNotEmpty) _buildDivider(),
+
+                    // My Bids section
+                    _buildMyBidsSection(state.userBids),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          if (state is EventListingRefreshing) {
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<EventListingBloc>().add(
+                  const RefreshEventsEvent(),
+                );
+                // Wait a bit for the refresh to complete
+                await Future.delayed(const Duration(seconds: 1));
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Page title
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                      child: Text(
+                        'Event Listing',
+                        style: AppTextStyles.heading3,
+                      ),
+                    ),
+
+                    // Filter chips
+                    if (state.filters.isNotEmpty)
+                      _buildFilterChips(state.filters),
+                    const SizedBox(height: 16),
+                    // Events list
+                    if (state.events.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Center(child: Text('No events found')),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          children: state.events.map((event) {
+                            return EventCardWidget(
+                              event: event,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => BlocProvider(
+                                      create: (context) =>
+                                          di.sl<EventDetailBloc>(),
+                                      child: EventDetailPage(
+                                        eventId: event.id,
+                                        slug1: event.slug1,
+                                        slug2: event.slug2,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              onBookmarkTap: () {
+                                context.read<EventListingBloc>().add(
+                                  ToggleBookmarkEvent(event.id),
+                                );
+                              },
+                              onShareTap: () {
+                                // Handle share tap
+                              },
+                              showAttendeeInfo: true,
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                    // Divider with dots
+                    if (state.events.isNotEmpty) _buildDivider(),
+
+                    // My Bids section
+                    _buildMyBidsSection(state.userBids),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Initial state
+          return const Center(child: CircularProgressIndicator());
+        },
       ),
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentNavIndex,
@@ -194,24 +302,22 @@ class _EventListingPageState extends State<EventListingPage> {
     );
   }
 
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(List<EventFilter> filters) {
     return SizedBox(
       height: 34,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 11),
         scrollDirection: Axis.horizontal,
-        itemCount: _filters.length,
+        itemCount: filters.length,
         itemBuilder: (context, index) {
-          final filter = _filters[index];
+          final filter = filters[index];
           return Padding(
-            padding: EdgeInsets.only(
-              right: index < _filters.length - 1 ? 8 : 0,
-            ),
+            padding: EdgeInsets.only(right: index < filters.length - 1 ? 8 : 0),
             child: FilterChipWidget(
               label: filter.displayName,
               count: filter.count,
               isActive: filter.isActive,
-              onTap: () => _onFilterTap(index),
+              onTap: () => _onFilterTap(index, filters),
               showCloseIcon: true,
             ),
           );
@@ -249,43 +355,33 @@ class _EventListingPageState extends State<EventListingPage> {
     );
   }
 
-  Widget _buildMyBidsSection() {
+  Widget _buildMyBidsSection(List<dynamic> userBids) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'My Bids (${_userBids.length})',
+            'My Bids (${userBids.length})',
             style: AppTextStyles.heading3,
           ),
         ),
         const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: _userBids.map((event) {
-              return EventCardWidget(
-                event: event,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EventDetailPage(eventId: event.id),
-                    ),
-                  );
-                },
-                onBookmarkTap: () {
-                  // Handle bookmark tap
-                },
-                onShareTap: () {
-                  // Handle share tap
-                },
-                showAttendeeInfo: false,
-              );
-            }).toList(),
+        if (userBids.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('No bids yet'),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: userBids.map((bid) {
+                // TODO: Replace with proper bid widget when Bid entity is ready
+                return const SizedBox.shrink();
+              }).toList(),
+            ),
           ),
-        ),
         const SizedBox(height: 20),
       ],
     );

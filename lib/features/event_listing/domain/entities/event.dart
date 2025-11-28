@@ -19,6 +19,8 @@ class Event extends Equatable {
   final List<String> recentAttendees; // Names of recent attendees
   final bool isFavorite;
   final bool isBookmarked;
+  final String? slug1; // Venue slug for event detail API
+  final String? slug2; // Event slug for event detail API
 
   const Event({
     required this.id,
@@ -38,6 +40,8 @@ class Event extends Equatable {
     this.recentAttendees = const [],
     this.isFavorite = false,
     this.isBookmarked = false,
+    this.slug1,
+    this.slug2,
   });
 
   @override
@@ -59,6 +63,8 @@ class Event extends Equatable {
     recentAttendees,
     isFavorite,
     isBookmarked,
+    slug1,
+    slug2,
   ];
 }
 

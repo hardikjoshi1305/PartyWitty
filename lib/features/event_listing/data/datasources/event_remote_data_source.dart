@@ -1,9 +1,22 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../../../core/constants/api_constants.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../models/event_model.dart';
 import '../models/event_detail_model.dart';
 import '../models/filter_model.dart';
+import '../models/paginated_response_model.dart';
 
 /// Remote data source for events (API calls)
 abstract class EventRemoteDataSource {
+  /// Fetch paginated events from API
+  Future<PaginatedEventsResponseModel> getPaginatedEvents({
+    required double latitude,
+    required double longitude,
+    required int page,
+    required int limit,
+  });
+
   /// Fetch all events from API
   Future<List<EventModel>> getEvents();
 
@@ -15,6 +28,12 @@ abstract class EventRemoteDataSource {
 
   /// Fetch event detail by ID from API (with extended information)
   Future<EventDetailModel> getEventDetailById(String eventId);
+
+  /// Fetch event detail by slugs from API (with extended information)
+  Future<EventDetailModel> getEventDetailBySlugs({
+    required String slug1,
+    required String slug2,
+  });
 
   /// Fetch available filters from API
   Future<List<FilterModel>> getFilters();
@@ -31,9 +50,61 @@ abstract class EventRemoteDataSource {
 
 /// Implementation of EventRemoteDataSource
 class EventRemoteDataSourceImpl implements EventRemoteDataSource {
-  // final http.Client client;
+  final http.Client client;
 
-  // EventRemoteDataSourceImpl({required this.client});
+  EventRemoteDataSourceImpl({required this.client});
+
+  @override
+  Future<PaginatedEventsResponseModel> getPaginatedEvents({
+    required double latitude,
+    required double longitude,
+    required int page,
+    required int limit,
+  }) async {
+    try {
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.allEventsEndpoint}',
+      );
+
+      // Create multipart request
+      final request = http.MultipartRequest('POST', url);
+
+      // Add form fields
+      request.fields['latitude'] = latitude.toString();
+      request.fields['longitude'] = longitude.toString();
+      request.fields['limit'] = limit.toString();
+      request.fields['page'] = page.toString();
+
+      // Send request
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 30));
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body) as Map<String, dynamic>;
+
+        // Check if status is true
+        if (jsonResponse['status'] == true) {
+          return PaginatedEventsResponseModel.fromJson(jsonResponse);
+        } else {
+          throw ServerException();
+        }
+      } else {
+        throw ServerException();
+      }
+    } catch (e) {
+      if (e is ServerException) {
+        rethrow;
+      } else if (e is http.ClientException ||
+          e.toString().contains('SocketException')) {
+        throw NetworkException();
+      } else {
+        throw ServerException();
+      }
+    }
+  }
 
   @override
   Future<List<EventModel>> getEvents() async {
@@ -72,6 +143,78 @@ class EventRemoteDataSourceImpl implements EventRemoteDataSource {
     // TODO: Implement API call
     await Future.delayed(const Duration(milliseconds: 500));
     return _getMockEventDetail();
+  }
+
+  @override
+  Future<EventDetailModel> getEventDetailBySlugs({
+    required String slug1,
+    required String slug2,
+  }) async {
+    try {
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.eventDetailsEndpoint}',
+      );
+
+      // Create multipart request
+      final request = http.MultipartRequest('POST', url);
+
+      // Add form fields
+      request.fields['slug1'] = slug1;
+      request.fields['slug2'] = slug2;
+      print(slug1);
+      print(slug2);
+      print(url);
+
+      // Send request
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 30));
+
+      final response = await http.Response.fromStream(streamedResponse);
+      print(response.body.toString());
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body) as Map<String, dynamic>;
+
+        // Check if status is true
+        if (jsonResponse['status'] == true && jsonResponse['data'] != null) {
+          try {
+            final data = jsonResponse['data'] as Map<String, dynamic>;
+            print('Parsing event detail data...');
+            final eventDetail = EventDetailModel.fromApiJson(data);
+            print('Event detail parsed successfully');
+            return eventDetail;
+          } catch (parseError, stackTrace) {
+            print('Error parsing event detail: $parseError');
+            print('Error type: ${parseError.runtimeType}');
+            print('Stack trace: $stackTrace');
+            rethrow; // Re-throw to be caught by outer catch
+          }
+        } else {
+
+          final msg = jsonResponse['msg'] as String? ?? 'Unknown error';
+          print('API returned error: $msg');
+          throw ServerException();
+        }
+      } else {
+        print('HTTP error status: ${response.statusCode}');
+        throw ServerException();
+      }
+    } catch (e, stackTrace) {
+      print('Exception in getEventDetailBySlugs: $e');
+      print('Exception type: ${e.runtimeType}');
+      print('Stack trace: $stackTrace');
+      if (e is ServerException) {
+        rethrow;
+      } else if (e is http.ClientException ||
+          e.toString().contains('SocketException')) {
+        throw NetworkException();
+      } else {
+        // If it's a parsing error, it will be caught here
+        print('Unexpected error, converting to ServerException: $e');
+        throw ServerException();
+      }
+    }
   }
 
   @override
